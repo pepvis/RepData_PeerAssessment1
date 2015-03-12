@@ -18,20 +18,58 @@ This report aims to explore this dataset and provide answers to a couple of ques
 ### Loading and preprocessing the data
 
 loading required packages:
-```{r}
+
+```r
 require(dplyr)
+```
+
+```
+## Loading required package: dplyr
+## 
+## Attaching package: 'dplyr'
+## 
+## The following object is masked from 'package:stats':
+## 
+##     filter
+## 
+## The following objects are masked from 'package:base':
+## 
+##     intersect, setdiff, setequal, union
+```
+
+```r
 require(ggplot2)
+```
+
+```
+## Loading required package: ggplot2
+```
+
+```r
 require(lubridate)
+```
+
+```
+## Loading required package: lubridate
+```
+
+```r
 require(scales)
 ```
 
+```
+## Loading required package: scales
+```
+
 Loading the data:
-```{r}
+
+```r
 activity <- read.csv("activity.csv", stringsAsFactors=FALSE)
 ```
 
 Preprocessing the data for easier  manipulation. Adding leading zero's so each interval consists of 4 digits.
-```{r}
+
+```r
 activity <- activity %>%
     mutate(date = ymd(date), time = sprintf("%04d", interval))
 ```
@@ -40,14 +78,16 @@ activity <- activity %>%
 ### What is mean total number of steps taken per day?
 
 This question is answerd by calculating the total number of steps taken per day and creating a histogram.
-```{r}
+
+```r
 tot_activity <- activity %>%
     filter(!is.na(steps)) %>%
     group_by(date) %>%
     summarize(total_steps = sum(steps))
 ```
 
-```{r histogram, fig.height=4, fig.width=6}
+
+```r
 ggplot(tot_activity, aes(total_steps)) +
     geom_histogram(binwidth = 2500, fill = "chartreuse4") +
     xlab("Total steps taken each day") +
@@ -55,17 +95,26 @@ ggplot(tot_activity, aes(total_steps)) +
     ggtitle("Frequency of total daily steps")
 ```
 
+![plot of chunk histogram](figure/histogram-1.png) 
+
 The mean and median of the total number of steps taken per day:
 
-```{r}
+
+```r
 summary(tot_activity$total_steps)[3:4]
+```
+
+```
+## Median   Mean 
+##  10760  10770
 ```
 
 ### What is the average daily activity pattern?
 
 Calculating the average number of steps taken, averaged across all days, of the 5-minute interval.
 
-```{r}
+
+```r
 av_activity <- activity %>%
     mutate(time = as.POSIXct(strptime(activity$time, "%H%M"))) %>%
     filter(!is.na(steps)) %>%
@@ -75,7 +124,8 @@ av_activity <- activity %>%
 
 Creating a time series plot
 
-```{r timeseriesplot, fig.height=4, fig.width=6}
+
+```r
 ggplot(av_activity, aes(time, average_steps)) +
     geom_line(colour = "chartreuse4") +
     scale_x_datetime(labels = date_format("%H:%M")) +
@@ -84,9 +134,12 @@ ggplot(av_activity, aes(time, average_steps)) +
     ggtitle("Average distribution of steps over the day")
 ```
 
+![plot of chunk timeseriesplot](figure/timeseriesplot-1.png) 
+
 The 5-minute interval, on average across all the days in the dataset, with the maximum number of steps:
 
-```{r}
+
+```r
 tmp_activity <- activity %>%
     filter(!is.na(steps)) %>%
     group_by(time) %>%
@@ -95,18 +148,31 @@ tmp_activity <- activity %>%
 filter(tmp_activity, average_steps == max(average_steps))
 ```
 
+```
+## Source: local data frame [1 x 2]
+## 
+##   time average_steps
+## 1 0835      206.1698
+```
+
 ### Imputing missing values
 
 Total number of missing values in the dataset:
 
-```{r}
+
+```r
 dim(activity)[1] - sum(complete.cases(activity))
+```
+
+```
+## [1] 2304
 ```
 
 To be able to impute the missing data, the assumption is made the time of day is most relevant.
 Therefore, each case with missing number of steps is imputed by the same 5-minute time interval, averaged for the total number of days. For this the previously calculated tmp_activity can be reused. 
 
-```{r}
+
+```r
 na_activity <- left_join(activity, tmp_activity, by = c("time" = "time"))
 
 na_activity <- na_activity %>%
@@ -122,7 +188,8 @@ tot_na_activity <- na_activity %>%
 
 Histogram of the total number of steps taken each day:
 
-```{r histogram2, fig.height=4, fig.width=6}
+
+```r
 ggplot(tot_na_activity, aes(total_steps)) +
     geom_histogram(binwidth = 2500, fill = "chartreuse4") +
     xlab("Total steps taken each day") +
@@ -130,9 +197,17 @@ ggplot(tot_na_activity, aes(total_steps)) +
     ggtitle("Frequency of total daily steps")
 ```
 
+![plot of chunk histogram2](figure/histogram2-1.png) 
+
 The mean and median of the total number of steps taken per day:
-```{r}
+
+```r
 summary(tot_na_activity$total_steps)[3:4]
+```
+
+```
+## Median   Mean 
+##  10770  10770
 ```
 
 The values differ from the estimates without the missing data imputed. The total number of steps has increased and the shape of the data has also been slightly impacted.
@@ -140,13 +215,19 @@ The values differ from the estimates without the missing data imputed. The total
 ### Are there differences in activity patterns between weekdays and weekends?
 
 Storing and changing language settings for consistent use:
-```{r}
+
+```r
 user_lang <- Sys.getlocale("LC_TIME")
 Sys.setlocale("LC_TIME", "English")
 ```
 
+```
+## [1] "English_United States.1252"
+```
+
 Indicating whether a given date is a weekday or weekend day.
-```{r}
+
+```r
 wknd_activity <- na_activity %>%
     mutate(wkday = weekdays(date),
            wkndday = as.factor(ifelse(wkday == "Sunday"|wkday == "Saturday",
@@ -157,12 +238,12 @@ wknd_activity <- wknd_activity %>%
     mutate(time = as.POSIXct(strptime(activity$time, "%H%M"))) %>%
     group_by(wkndday, time) %>%
     summarize(average_steps = mean(steps))
-
 ```
 
 Creating a panel plot containing a time series plot (i.e. type = "l") of the 5-minute interval and the average number of steps taken, averaged across all weekday days or weekend days.
 
-```{r timeseriesplot2, fig.height=8, fig.width=6}
+
+```r
 ggplot(wknd_activity, aes(time, average_steps)) +
     geom_line(colour = "chartreuse4") +
     scale_x_datetime(labels = date_format("%H:%M")) +
@@ -172,9 +253,16 @@ ggplot(wknd_activity, aes(time, average_steps)) +
     facet_wrap(~wkndday, nrow = 2, ncol = 1)
 ```
 
+![plot of chunk timeseriesplot2](figure/timeseriesplot2-1.png) 
+
 Restoring the language settings.
-```{r}
+
+```r
 Sys.setlocale("LC_TIME", user_lang)
+```
+
+```
+## [1] "Dutch_Netherlands.1252"
 ```
 
 
